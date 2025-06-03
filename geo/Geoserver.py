@@ -549,7 +549,8 @@ class Geoserver:
         layer_name: Optional[str] = None,
         file_type: str = "GeoTIFF",
         content_type: str = "image/tiff",
-        method: str = "file"
+        method: str = "file",
+        create_coverage: bool = True
     ):
         """
         Creates the coverage store; Data will be uploaded to the server.
@@ -568,6 +569,8 @@ class Geoserver:
             The content type of the file.
         method : str
             file | url | external | remote
+        create_coverage : bool
+            Whether to create a coverage
 
         Returns
         -------
@@ -589,6 +592,14 @@ class Geoserver:
             f = layer_name.split(".")
             if len(f) > 0:
                 layer_name = f[0]
+                
+        if not create_coverage:
+            return self._create_coveragestore_only(
+                path=path,
+                file_type=file_type,
+                workspace=workspace,
+                coveragestore_name=layer_name
+            )
 
         file_type = file_type.lower()
         if file_type == "netcdf":
@@ -614,6 +625,49 @@ class Geoserver:
         else:
             raise GeoserverException(r.status_code, r.content)
 
+    def _create_coveragestore_only(
+        self,
+        path,
+        file_type,
+        workspace,
+        coveragestore_name,
+    ):
+        """
+        Help method to crate coveragestore
+
+        Parameters
+        ----------
+        path : str
+            The path to the file.
+        file_type : str
+            The type of the file.
+        workspace : str
+            The name of the workspace.
+        coveragestore_name : str
+            The name of the coverage store.
+
+        Returns
+        -------
+        dict
+            The response from the server.
+        """
+        url = f"{self.service_url}/rest/workspaces/{workspace}/coveragestores"
+        data = (f"<coverageStore>"
+                f"<name>{coveragestore_name}</name>'"
+                f"<url>file:{path}</url>"
+                f"<type>{file_type}</type>"
+                f"<workspace>{workspace}</workspace>"
+                f"<enabled>true</enabled>"
+                f"</coverageStore>")
+        headers = {"content-type": "text/xml"}
+        resp = self._requests(method="post", url=url, data=data, headers=headers)
+        if resp.status_code == 201:
+            return self.get_coveragestore(
+                coveragestore_name=coveragestore_name,
+                workspace=workspace
+                )
+        else:
+            raise GeoserverException(resp.status_code, resp.content)
 
 
     def publish_time_dimension_to_coveragestore(

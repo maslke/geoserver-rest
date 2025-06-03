@@ -617,3 +617,17 @@ class TestCoveragestore:
         Tests that a coveragestore can be created using "url" method
         """
         self._test_create_coveragestore("url", self.url)
+        
+    def test_create_coveragestore_only(self):
+        """
+        Tests that create a coveragestore and only the coveragestore, not the coverage
+        """
+        resp = geo.create_coveragestore(
+                path=self.path,
+                workspace=self.workspace_name,
+                layer_name=self.layer_name,
+                file_type=self.type,
+                content_type="application/x-netcdf",
+                create_coverage=False
+            )
+        self._verify_coveragestore(resp)
